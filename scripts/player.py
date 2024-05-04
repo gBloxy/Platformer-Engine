@@ -11,11 +11,15 @@ class Player(Entity):
     
     def update(self):
         motion = [0, 0]
-        if self.g.keys[pygame.K_SPACE]:
-            self.jump()
-        if self.g.keys[pygame.K_q]:
+        if self.g.inputs.holding(pygame.K_q):
             motion[0] -= self.velocity * self.g.dt / 100
-        if self.g.keys[pygame.K_d]:
+        if self.g.inputs.holding(pygame.K_d):
             motion[0] += self.velocity * self.g.dt / 100
+        if self.g.inputs.pressed(pygame.K_SPACE):
+            self.jump()
+        elif self.g.inputs.holding(pygame.K_LCTRL):
+            self.dropthrough = True
+        elif self.dropthrough:
+            self.dropthrough = False
         self.motion = motion
         super().update()

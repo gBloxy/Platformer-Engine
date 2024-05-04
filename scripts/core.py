@@ -4,9 +4,10 @@ from os.path import join
 from json import load
 
 
-WIN_SIZE = (800, 600)
+SCREEN_SIZE = (900, 600)
+WIN_SIZE = (360, 240)
 
-TILE_SIZE = 32
+TILE_SIZE = 16
 TILE_TUPLE = (TILE_SIZE, TILE_SIZE)
 
 
@@ -43,3 +44,8 @@ def offset(pos, scroll):
 
 def offset_rect(rect, scroll):
     return pygame.Rect(rect.x - scroll[0], rect.y - scroll[1], *rect.size)
+
+
+def smooth(val, target, dt, slowness=1):
+    val += (target - val) / slowness * min(dt / 1000, slowness)
+    return val
