@@ -1,7 +1,7 @@
 
 import pygame
 
-from .core import data, TILE_SIZE
+from .core import TILE_SIZE, offset_rect
 import scripts.core as core
 
 
@@ -9,17 +9,14 @@ class Entity():
     def __init__(self, type, pos):
         self.type = type
         self.g = core.game
+        self.alive = True
+        self.physics = None
         
-        self.rect = pygame.Rect(pos, data().entities[type]['hitbox'])
-        self.img = pygame.Surface(self.rect.size)
+        # self.rect = pygame.Rect(pos, core.game.data.entities[type]['hitbox'])
+        # self.img = pygame.Surface(self.rect.size)
         
-        self.collisions = {i:False for i in {'left', 'right', 'top', 'bottom'}}
-        self.motion = [0, 0]
-        self.vertical_momentum = 0
-        self.air_timer = 0
-        self.dropthrough = False
-        
-        self.velocity = 1
+        self.img = self.g.asset['GraveRobber']
+        self.rect = self.img.get_rect(topleft=pos)
     
     @property
     def map_pos(self):
@@ -33,6 +30,26 @@ class Entity():
     def in_map(self):
         pos = self.map_pos
         return 0 <= pos[0] <= self.g.map.cols - 1 and 0 <= pos[1] <= self.g.map.rows - 1
+    
+    def update(self, dt=None):
+        pass
+    
+    def render(self, surf, scroll):
+        rect = offset_rect(self.rect, scroll)
+        surf.blit(self.img, rect)
+        pygame.draw.rect(surf, 'red', rect, 1)
+
+
+class PhysicEntity(Entity):
+    def __init__(self, type, pos):
+        super().__init__(type, pos)
+        self.collisions = {i:False for i in {'left', 'right', 'top', 'bottom'}}
+        self.motion = [0, 0]
+        self.vertical_momentum = 0
+        self.air_timer = 0
+        self.dropthrough = False
+        self.physics = 'entity'
+        self.velocity = 1
     
     def process_physics(self, motion, collideables):
         for tile in collideables:
@@ -89,8 +106,8 @@ class Entity():
         self.motion[1] += self.vertical_momentum
         
         self.vertical_momentum += 0.3
-        if self.vertical_momentum > 5:
-            self.vertical_momentum = 5
+        if self.vertical_momentum > 7:
+            self.vertical_momentum = 7
         
         self.move(self.motion)
         
@@ -111,9 +128,25 @@ class Entity():
         self.update_physics()
         
         for tile in self.g.map.get_neighbors(self.map_pos) if self.in_map else []:
-            pygame.draw.rect(self.g.display, 'blue', (tile.rect.x - self.g.cam.scroll[0], tile.rect.y - self.g.cam.scroll[1], *tile.rect.size), 1)
-        
-    def render(self, surf):
-        rect = (self.rect.x - self.g.cam.scroll[0], self.rect.y - self.g.cam.scroll[1], *self.rect.size)
-        surf.blit(self.img, rect)
-        pygame.draw.rect(surf, 'red', rect, 1)
+            pygame.draw.rect(self.g.display, 'blue', offset_rect(tile.rect, self.g.cam.scroll), 1)
+
+
+class EntityGroup():
+    def __init__(self):
+        self.entities = []
+    
+    def add(self, entity):
+        self.entities.append(entity)
+    
+    def remove(self, entity):
+        self.entities.remove(entity)
+    
+    def update(self, dt):
+        for e in self.entities:
+            e.update(dt)
+            if not e.alive:
+                self.remove(e)
+    
+    def render(self, surf, scroll):
+        for e in self.entities:
+            e.render(surf, scroll)

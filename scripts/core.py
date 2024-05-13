@@ -1,11 +1,15 @@
 
-import pygame
-from os.path import join
+from math import pi, atan2
+from os.path import basename, splitext
 from json import load
+import pygame
 
 
 SCREEN_SIZE = (900, 600)
 WIN_SIZE = (360, 240)
+
+DEFAULT_SCREEN_SIZE = (900, 600)
+DEFAULT_WIN_SIZE = (360, 240)
 
 TILE_SIZE = 16
 TILE_TUPLE = (TILE_SIZE, TILE_SIZE)
@@ -26,16 +30,8 @@ def read_json(path):
     return data
 
 
-def asset(path):
-    return join('asset', path)
-
-
 def clamp(value, minimum, maximum):
     return min(maximum, max(minimum, value))
-
-
-def data():
-    return game.data
 
 
 def offset(pos, scroll):
@@ -49,3 +45,11 @@ def offset_rect(rect, scroll):
 def smooth(val, target, dt, slowness=1):
     val += (target - val) / slowness * min(dt / 1000, slowness)
     return val
+
+
+def file_name(path):
+    return splitext(basename(path))[0]
+
+
+def blit_center(target_surf, surf, pos):
+    target_surf.blit(surf, (pos[0] - surf.get_width() / 2, pos[1] - surf.get_height() / 2))

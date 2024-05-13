@@ -1,15 +1,15 @@
 
 import pygame
 
-from .entity import Entity
+from .entity import PhysicEntity
 
 
-class Player(Entity):
+class Player(PhysicEntity):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.velocity = 20
     
-    def update(self):
+    def update(self, dt=None):
         motion = [0, 0]
         if self.g.inputs.holding(pygame.K_q):
             motion[0] -= self.velocity * self.g.dt / 100

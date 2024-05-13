@@ -1,7 +1,7 @@
 
 import pygame
 
-from .core import read_file, TILE_SIZE
+from .core import read_file, TILE_SIZE, WIN_SIZE, offset
 
 
 physics_types = {
@@ -29,15 +29,23 @@ class Tile():
     @property
     def air(self):
         return self.physics == 'air'
+    
+    def is_visible(self, scroll):
+        return not ( self.rect.bottom - scroll[1] < 0         or
+                     self.rect.top - scroll[1] > WIN_SIZE[1]  or
+                     self.rect.right - scroll[0] < 0          or
+                     self.rect.left - scroll[0] > WIN_SIZE[0]   )
 
 
 class Scene():
-    def __init__(self, file):
-        data = read_file(file)
+    def __init__(self, game, file):
+        self.g = game
         
         self.raw_map = []
         self.map = []
         self.tiles = []
+        
+        data = read_file(file)
         
         for y, row in enumerate(data.splitlines()):
             self.raw_map.append([])
@@ -69,3 +77,17 @@ class Scene():
                     neighbors.append(tile)
         
         return neighbors
+    
+    def render(self, surf, scroll):
+        for tile in self.tiles:
+            if tile.is_visible(scroll):
+                if tile.type == '1':
+                    surf.blit(self.g.asset['tile'], offset(tile.rect.topleft, scroll))
+                elif tile.type == '2':
+                    surf.blit(self.g.asset['rampr'], offset(tile.rect.topleft, scroll))
+                elif tile.type == '3':
+                    surf.blit(self.g.asset['rampl'], offset(tile.rect.topleft, scroll))
+                elif tile.type == '4':
+                    surf.blit(self.g.asset['dropthrough'], offset(tile.rect.topleft, scroll))
+                else:
+                    surf.blit(self.g.asset['unknowed'], offset(tile.rect.topleft, scroll))

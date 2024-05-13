@@ -1,7 +1,9 @@
 
-from .core import read_json, asset
+from os.path import join
+
+from .core import read_json
 
 
 class GameDataManager():
-    def __init__(self):
-        self.entities = read_json(asset('entities.json'))
+    def __init__(self, path):
+        self.entities = read_json(join(path, 'entities.json'))

@@ -1,44 +1,50 @@
 
-import pygame
 from sys import exit
+from os.path import join
+import pygame
 pygame.init()
 
+from scripts.window import Window
 from scripts.scene import Scene
 from scripts.gamedata import GameDataManager
+from scripts.entity import PhysicEntity, EntityGroup
 from scripts.player import Player
 from scripts.camera import Camera
 from scripts.input import Input
+from scripts.asset import Assets
 import scripts.core as core
-
-
-tile_img = pygame.image.load('asset\\tile.png')
-rampr = pygame.image.load('asset\\rampr.png')
-rampl = pygame.image.load('asset\\rampl.png')
-dropthrough = pygame.image.load('asset\\dropthrough.png')
-unknowed = pygame.image.load('asset\\unknowed.png')
-font = pygame.font.SysFont('impact', 30)
 
 
 class Game():
     def __init__(self):
-        self.window = pygame.display.set_mode(core.SCREEN_SIZE)
-        pygame.display.set_caption('platformer')
-        self.clock = pygame.time.Clock()
-        
+        self.window = Window()
+        self.window.display_fps(True)
         self.display = pygame.Surface(core.WIN_SIZE)
         
-        self.dt = 0
+        core.game = self
+        
         self.inputs = Input()
         self.mouse = self.inputs.mouse
         
-        self.data = GameDataManager()
-        core.game = self
+        self.data = GameDataManager('asset\\')
+        self.asset = Assets('asset\\')
+        self.asset.load_imgs_folder('textures\\')
         
-        self.map = Scene(core.asset('map.txt'))
-        self.player = Player('player', (150, 50))
+        self.map = Scene(self, join('asset\\', 'map.txt'))
+        
+        self.entities = EntityGroup()
+        self.bullets = EntityGroup()
         self.cam = Camera(self, slowness=0.3)
+        
+        self.player = Player('player', (150, 50))
+        self.entities.add(self.player)
+        self.entities.add(PhysicEntity('player', (206, 70)))
         self.cam.focus(self.player)
     
+    @property
+    def dt(self):
+        return self.window.dt
+
     def quit(self):
         pygame.quit()
         exit()
@@ -51,31 +57,20 @@ class Game():
             
             self.display.fill('deepskyblue3')
             
-            for tile in self.map.tiles:
-                if tile.type == '1':
-                    self.display.blit(tile_img, (tile.rect.x - self.cam.scroll[0], tile.rect.y - self.cam.scroll[1]))
-                elif tile.type == '2':
-                    self.display.blit(rampr, (tile.rect.x - self.cam.scroll[0], tile.rect.y - self.cam.scroll[1]))
-                elif tile.type == '3':
-                    self.display.blit(rampl, (tile.rect.x - self.cam.scroll[0], tile.rect.y - self.cam.scroll[1]))
-                elif tile.type == '4':
-                    self.display.blit(dropthrough, (tile.rect.x - self.cam.scroll[0], tile.rect.y - self.cam.scroll[1]))
-                else:
-                    self.display.blit(unknowed, (tile.rect.x - self.cam.scroll[0], tile.rect.y - self.cam.scroll[1]))
-            
-            self.player.update()
-            
             self.cam.update()
             
-            self.player.render(self.display)
+            self.map.render(self.display, self.cam.scroll)
             
-            self.window.blit(pygame.transform.scale(self.display, core.SCREEN_SIZE), (0, 0))
+            self.entities.update(self.window.dt)
+            self.entities.render(self.display, self.cam.scroll)
             
-            self.window.blit(font.render(str(round(self.clock.get_fps())), True, 'green'), (5, 3))
+            if self.inputs.pressed(pygame.K_g):
+                self.cam.screen_shake(5)
             
-            pygame.display.flip()
+            self.bullets.update(self.window.dt)
+            self.bullets.render(self.display, self.cam.scroll)
             
-            self.dt = self.clock.tick(60)
+            self.window.cycle(self.display)
 
 
 if __name__ == '__main__':
