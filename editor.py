@@ -5,7 +5,7 @@ from sys import exit
 import pygame
 pygame.init()
 
-from scripts.core import TILE_SIZE, TILE_TUPLE, WIN_SIZE, SCREEN_SIZE, file_name, blit_center
+from scripts.core import TILE_SIZE, TILE_TUPLE, WIN_SIZE, SCREEN_SIZE, file_name, blit_center, write_json, read_json
 from scripts.window import Window
 from scripts.input import Input
 from scripts.asset import Assets
@@ -26,12 +26,24 @@ depth_surf = pygame.Surface(TILE_TUPLE, pygame.SRCALPHA)
 depth_surf.fill((0, 0, 0, 50))
 
 
-def offset_rect(rect, scroll):
+def offset_pos(pos):
+    return (pos[0] + scroll[0], pos[1] + scroll[1])
+
+
+def offset_rect(rect):
     return pygame.Rect(rect.x + scroll[0], rect.y + scroll[1], *rect.size)
 
 
 def scale(pos):
     return (pos[0] * SCALING[0], pos[1] * SCALING[1])
+
+
+def zoom_pos(pos):
+    return (pos[0] * zoom, pos[1] * zoom)
+
+
+def zoom_rect(rect):
+    return pygame.Rect(rect.x * zoom, rect.y * zoom, rect.w * zoom, rect.h * zoom)
 
 
 class Button():
@@ -153,18 +165,17 @@ class Selection():
         return Selection(self.pos1, self.pos2)
     
     def render(self, surf):
-        pygame.draw.rect(surf, 'blue', ((self.x * TILE_SIZE) + scroll[0], (self.y * TILE_SIZE) + scroll[1], self.width * TILE_SIZE, self.height * TILE_SIZE), 2)
+        rect = (zoom_pos(offset_pos((self.x * TILE_SIZE, self.y * TILE_SIZE))), zoom_pos((self.width * TILE_SIZE, self.height * TILE_SIZE)))
+        pygame.draw.rect(surf, 'blue', rect, 2)
 
 
 class Scene():
     def __init__(self, data=None):
         self.layers = 3
-        
         if data is not None:
-            ...
+            self.from_data(data)
         else:
             self.new_map()
-        
         self.modified = False
     
     def new_map(self, dimension=(20, 10)):
@@ -176,12 +187,32 @@ class Scene():
         
         ind.set_modified('temp')
     
+    def to_data(self):
+        data = {}
+        map_ = [[tile[0] for tile in self.map[1][y]] for y in range(self.rows)]
+        data['map'] = map_
+        return data
+    
+    def from_data(self, data):
+        map_ = data['map']
+        self.rows = len(map_)
+        self.cols = len(map_[0])
+        
+        layer0 = [[['air', pygame.Rect((x*TILE_SIZE, y*TILE_SIZE), TILE_TUPLE)] for x in range(self.cols)] for y in range(self.rows)]
+        layer2 = [[['air', pygame.Rect((x*TILE_SIZE, y*TILE_SIZE), TILE_TUPLE)] for x in range(self.cols)] for y in range(self.rows)]
+        layer1 = [[[map_[y][x], pygame.Rect(x*TILE_SIZE, y*TILE_SIZE, *TILE_TUPLE)] for x in range(self.cols)] for y in range(self.rows)]
+        self.map = [layer0, layer1, layer2]
+        
+        self.dim = [self.cols * TILE_SIZE, self.rows * TILE_SIZE]
+        
+        ind.set_modified('temp')
+    
     def is_visible(self, tile):
         rect = tile[1]
-        return not ( rect.bottom + scroll[1] < 0           or
-                     rect.top    + scroll[1] > WIN_SIZE[1] or
-                     rect.right  + scroll[0] < 0           or
-                     rect.left   + scroll[0] > WIN_SIZE[0]   )
+        return not ( (rect.bottom + scroll[1]) * zoom < 0           or
+                     (rect.top    + scroll[1]) * zoom > WIN_SIZE[1] or
+                     (rect.right  + scroll[0]) * zoom < 0           or
+                     (rect.left   + scroll[0]) * zoom > WIN_SIZE[0]   )
     
     def exist(self, pos):
         return 0 <= pos[0] < self.cols and 0 <= pos[1] < self.rows
@@ -267,6 +298,8 @@ class Files():
     def save_scene(self):
         if self.path is None:
             self.path = filedialog.asksaveasfilename()
+        data = scene.to_data()
+        write_json(self.path, data)
         scene.modified = False
     
     def check_modified(self):
@@ -284,8 +317,10 @@ class Files():
         global scene
         self.check_modified()
         file = filedialog.askopenfilename()
-        self.path = file
-        scene = Scene(data=file)
+        if file:
+            self.path = file
+            data = read_json(self.path)
+            scene = Scene(data=data)
 
 
 class GUI():
@@ -457,6 +492,7 @@ btns = GUI()
 
 scroll = [20, 40]
 tex_scroll = 0
+zoom = 1
 
 moving_map = False
 old_mouse_pos = (0, 0)
@@ -490,6 +526,12 @@ while True:
     if mouse.real_pos[1] < 40:
         ui_hovered = True
     
+    # manage zoom
+    if (inputs.pressed(pygame.K_EQUALS) or (mouse.scroll_up and not ui_hovered)) and zoom < 2:
+        zoom += 0.2
+    elif (inputs.pressed(pygame.K_6) or (mouse.scroll_down and not ui_hovered)) and zoom > 0.6:
+        zoom -= 0.2
+    
     # move the map
     if (mouse.holding_right or inputs.holding(pygame.K_SPACE)) and not moving_map and not ui_hovered:
         moving_map = True
@@ -498,19 +540,19 @@ while True:
         if not (mouse.holding_right or inputs.holding(pygame.K_SPACE)) or ui_hovered:
             moving_map = False
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-        scroll[0] += (mouse.real_pos[0] - old_mouse_pos[0]) / SCALING[0]
-        scroll[1] += (mouse.real_pos[1] - old_mouse_pos[1]) / SCALING[1]
+        scroll[0] += int((mouse.real_pos[0] - old_mouse_pos[0]) / SCALING[0])
+        scroll[1] += int((mouse.real_pos[1] - old_mouse_pos[1]) / SCALING[1])
     old_mouse_pos = mouse.real_pos
     
     # the mouse pos minus the scroll to get the tiles collisions without scroll issues
-    mouse_offseted = (mouse.pos[0] - scroll[0], mouse.pos[1] - scroll[1])
+    mouse_offseted = (mouse.pos[0] / zoom - scroll[0], mouse.pos[1] / zoom - scroll[1])
     
     # check if the mouse is hovering the map
     if ui_hovered:
         mouse_in_map = False
-    elif not (scroll[0] + 1 <= mouse.pos[0] <= scene.dim[0] + scroll[0] - 1):
+    elif not (scroll[0] * zoom + 1 <= mouse.pos[0] <= (scene.dim[0] + scroll[0]) * zoom - 1):
         mouse_in_map = False
-    elif not (scroll[1] + 1 <= mouse.pos[1] <= scene.dim[1] + scroll[1] - 1):
+    elif not (scroll[1] * zoom + 1 <= mouse.pos[1] <= (scene.dim[1] + scroll[1]) * zoom - 1):
         mouse_in_map = False
     else:
         mouse_in_map = True
@@ -518,14 +560,14 @@ while True:
     if any(layers):
         # background grid
         for x in range(scene.cols + 1):
-            posx = (x * TILE_SIZE + scroll[0]) * SCALING[0]
-            pygame.draw.line(gui, 'lightgray', (posx, scroll[1] * SCALING[1]), (posx, (scroll[1] + scene.dim[1]) * SCALING[1]))
+            posx = (x * TILE_SIZE + scroll[0]) * SCALING[0] * zoom
+            pygame.draw.line(gui, 'lightgray', (posx, scroll[1] * SCALING[1] * zoom), (posx, (scroll[1] + scene.dim[1]) * SCALING[1] * zoom))
         for y in range(scene.rows + 1):
-            posy = (y * TILE_SIZE + scroll[1]) * SCALING[0]
-            pygame.draw.line(gui, 'lightgray', (scroll[0] * SCALING[0], posy), ((scroll[0] + scene.dim[0]) * SCALING[0], posy))
+            posy = (y * TILE_SIZE + scroll[1]) * SCALING[0] * zoom
+            pygame.draw.line(gui, 'lightgray', (scroll[0] * SCALING[0] * zoom, posy), ((scroll[0] + scene.dim[0]) * SCALING[0] * zoom, posy))
         # x and y axis
-        pygame.draw.line(gui, 'red', scale(scroll), scale((scroll[0] + scene.dim[0], scroll[1])), 2)
-        pygame.draw.line(gui, 'blue', scale(scroll), scale((scroll[0], scroll[1] + scene.dim[1])), 2)
+        pygame.draw.line(gui, 'red', zoom_pos(scale(scroll)), zoom_pos(scale((scroll[0] + scene.dim[0], scroll[1]))), 2)
+        pygame.draw.line(gui, 'blue', zoom_pos(scale(scroll)), zoom_pos(scale((scroll[0], scroll[1] + scene.dim[1]))), 2)
     
     # texture choosing ui background
     pygame.draw.rect(gui, 'lightgray', (0, 0, SCREEN_SIZE[0], 40))
@@ -590,18 +632,20 @@ while True:
         for y, row in enumerate(current_layer):
             for x, tile in enumerate(row):
                 if scene.is_visible(tile) and layers[z]:
-                    rect = offset_rect(tile[1], scroll)
+                    rect = offset_rect(tile[1])
+                    rect = zoom_rect(rect)
                     if tile[0] != 'air':
-                        display.blit(asset[tile[0]], rect)
+                        display.blit(pygame.transform.scale(asset[tile[0]], zoom_pos(asset[tile[0]].get_size())), rect)
                         if z != layer:
                             display.blit(depth_surf, rect)
     
     # render hovered tile / actions indication
     if mouse_in_map and any(layers):
-        rect = offset_rect(hovered_tile[1], scroll)
+        rect = offset_rect(hovered_tile[1])
+        rect = zoom_rect(rect)
         if edit_mode == 'place':
             if selected is not None:
-                display.blit(asset.images_alpha[selected], rect)
+                display.blit(pygame.transform.scale(asset.images_alpha[selected], zoom_pos(asset.images_alpha[selected].get_size())), rect)
             else:
                 pygame.draw.rect(display, edit_color, rect, 1)
         elif edit_mode != 'mouse':

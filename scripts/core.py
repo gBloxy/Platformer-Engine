@@ -1,7 +1,7 @@
 
 from math import pi, atan2
 from os.path import basename, splitext
-from json import load
+from json import load, dump
 import pygame
 
 
@@ -28,6 +28,16 @@ def read_json(path):
     with open(path) as file:
         data = load(file)
     return data
+
+
+def write_file(path, data):
+    with open(path, 'w') as file:
+        file.write(data)
+
+
+def write_json(path, data):
+    with open(path, 'w') as file:
+        dump(data, file)
 
 
 def clamp(value, minimum, maximum):
