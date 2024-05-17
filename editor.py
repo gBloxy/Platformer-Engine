@@ -1,26 +1,31 @@
 
 from tkinter import filedialog, messagebox, simpledialog
-from os.path import join
-from sys import exit
+from os.path import join, dirname
+import sys
 import pygame
 pygame.init()
 
-from scripts.core import TILE_SIZE, TILE_TUPLE, WIN_SIZE, SCREEN_SIZE, file_name, blit_center, write_json, read_json
-from scripts.window import Window
-from scripts.input import Input
-from scripts.asset import Assets
+sys.path.append(join(dirname(__file__), 'engine'))
 
+from core import TILE_SIZE, TILE_TUPLE, file_name, blit_center, write_json, read_json
+from window import Window
+from input import Input
+from asset import Assets
+
+
+SCREEN_SIZE = (900, 600)
+WIN_SIZE = (450, 300)
 
 SCALING = (SCREEN_SIZE[0] / WIN_SIZE[0], SCREEN_SIZE[1] / WIN_SIZE[1])
 
-win = Window(caption='Platformer Engine - Editor')
-inputs = Input()
+win = Window(SCREEN_SIZE, caption='Platformer Engine - Editor')
+inputs = Input(SCREEN_SIZE, WIN_SIZE)
 mouse = inputs.mouse
 
 display = pygame.Surface(WIN_SIZE)
 gui = pygame.Surface(SCREEN_SIZE, pygame.SRCALPHA)
 
-font = pygame.font.SysFont('arimo', 20)
+font = pygame.freetype.SysFont('arimo', 20)
 
 depth_surf = pygame.Surface(TILE_TUPLE, pygame.SRCALPHA)
 depth_surf.fill((0, 0, 0, 50))
@@ -52,8 +57,8 @@ class Button():
             img = pygame.transform.scale(pygame.image.load(join('editor_files', icon)), (25, 25))
             self.rect = pygame.Rect(x, y, 35, 35)
         else:
-            img = font.render(text, True, 'black')
-            self.rect = pygame.Rect(x, y, img.get_width() + 20, img.get_height() + 10)
+            img = font.render(text, 'black')[0]
+            self.rect = pygame.Rect(x, y, img.get_width() + 20, 35)
         center = (self.rect.width/2, self.rect.height/2)
         self.img = pygame.Surface(self.rect.size)
         self.img.fill('gray')
@@ -420,21 +425,21 @@ class Indications():
     def __init__(self):
         self.right = SCREEN_SIZE[0] - 20
         self.centery = SCREEN_SIZE[1] - 30
-        self.font = pygame.font.SysFont('arimo', 15)
+        self.font = pygame.freetype.SysFont('arimo', 15)
         self.layers = {0:'back', 1:'main', 2:'top'}
         self.set_pos((0, 0))
         self.set_layer(1)
         self.set_modified('temp')
     
     def set_pos(self, pos):
-        self.pos_surf = self.font.render(f'x: [{pos[0]}] y: [{pos[1]}]', True, 'black')
+        self.pos_surf = self.font.render(f'x: [{pos[0]}] y: [{pos[1]}]', 'black')[0]
     
     def set_layer(self, layer):
         layer = self.layers[layer]
-        self.layer_surf = self.font.render(f'layer: [{layer}]', True, 'black')
+        self.layer_surf = self.font.render(f'layer: [{layer}]', 'black')[0]
     
     def set_modified(self, state):
-        self.state_surf = self.font.render('*'+state if state == 'modified' else state, True, 'black')
+        self.state_surf = self.font.render('*'+state if state == 'modified' else state, 'black')[0]
     
     def render(self, surf):
         right = self.right - self.pos_surf.get_width()
@@ -490,7 +495,7 @@ scene = Scene()
 files = Files()
 btns = GUI()
 
-scroll = [20, 40]
+scroll = [65, 70]
 tex_scroll = 0
 zoom = 1
 
@@ -514,7 +519,7 @@ while True:
     inputs.process_events()
     if inputs.pressed(pygame.K_ESCAPE) or inputs.quit:
         pygame.quit()
-        exit()
+        sys.exit()
         # TODO : ask for save the map before quiting
     
     # clear all the render surfaces
