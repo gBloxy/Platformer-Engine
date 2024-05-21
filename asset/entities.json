@@ -1,6 +1,22 @@
 {
     "player": 
     {
-        "hitbox": [15, 20]
+        "hitbox": [18, 25],
+        "image": "player\\idle\\p.png",
+        "animations":
+        {
+            "idle":
+            {
+                "path": "player\\idle",
+                "frame_time": 9999,
+                "loop": false
+            },
+            "walk":
+            {
+                "path": "player\\walk",
+                "frame_time": 125
+            }
+        }
+        
     }
 }

@@ -24,8 +24,8 @@ class Game():
         self.inputs = Input()
         self.mouse = self.inputs.mouse
         
-        self.data = GameDataManager(asset_path)
         self.asset = Assets(asset_path)
+        self.data = GameDataManager(asset_path)
         
         self.cam = Camera(slowness=cam_slowness)
         

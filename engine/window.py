@@ -11,7 +11,7 @@ class Window():
         
         self.clock = pygame.Clock()
         self.framerate = framerate
-        self.dt = 0
+        self.dt = 0.1
         
         self.fps_font = pygame.font.SysFont('impact', 30)
         self.show_fps = False

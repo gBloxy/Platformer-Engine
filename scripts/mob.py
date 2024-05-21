@@ -3,8 +3,8 @@ from engine import PhysicEntity
 
 
 class Mob(PhysicEntity):
-    def __init__(self, pos, type='player'):
-        super().__init__(type, pos)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.life = 3
     
     def damage(self, dmg):
@@ -13,7 +13,7 @@ class Mob(PhysicEntity):
             self.alive = False
     
     def update(self, dt=None):
-        super().update()
-        
+        self.gravity()
+        self.update_physics()
         if not self.g.player.invincible and self.rect.colliderect(self.g.player.rect):
             self.g.player.damage(1)

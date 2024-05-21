@@ -13,7 +13,7 @@ class Assets():
         self.sounds = {}
     
     def __getitem__(self, key):
-        return self.images.get(key, self.sounds.get(key))
+        return self.images[key]
     
     def _load_img(self, path, data=None):
         surf = pygame.image.load(path)
@@ -39,3 +39,6 @@ class Assets():
     def load_sounds_folder(self, path, volumes):
         for name in listdir(join(self.path, path)):
             self.load_sound(join(self.path, path, name), volumes[file_name(name)])
+    
+    def play(self, sound):
+        self.sounds[sound].play()

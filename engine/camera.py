@@ -24,8 +24,8 @@ class Camera(Element):
         return self.target if type(self.target) in (list, tuple) else self.target.rect.center
     
     def set_tilemap(self, tilemap):
-        self.max_scroll = (self.g.map.width - self.g.size[0], self.g.map.height - self.g.size[1])
         self.tilemap = tilemap
+        self.max_scroll = (tilemap.width - self.g.size[0], tilemap.height - self.g.size[1])
     
     def focus(self, target):
         self.target = target
@@ -40,8 +40,8 @@ class Camera(Element):
     
     def update(self):
         center = self.target_pos
-        self.scroll[0] = smooth(self.scroll[0], center[0] - self.g.size[0] // 2, self.g.dt, slowness=self.slowness)
-        self.scroll[1] = smooth(self.scroll[1], center[1] - self.g.size[1] // 2, self.g.dt, slowness=self.slowness)
+        self.scroll[0] = int(smooth(self.scroll[0], center[0] - self.g.size[0] // 2, self.g.dt, slowness=self.slowness))
+        self.scroll[1] = int(smooth(self.scroll[1], center[1] - self.g.size[1] // 2, self.g.dt, slowness=self.slowness))
         
         if self.tilemap:
             self.scroll[0] = clamp(self.scroll[0], 0, self.max_scroll[0])

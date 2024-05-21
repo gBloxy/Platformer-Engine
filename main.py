@@ -13,14 +13,14 @@ class Game(engine.Game):
     def load(self):
         self.window.display_fps(True)
         
-        self.asset.load_imgs_folder('textures\\')
+        self.asset.load_imgs_folder('textures\\tiles\\')
         
         self.map = engine.Scene(join('asset\\', 'map.txt'))
         self.cam.set_tilemap(self.map)
         
-        self.player = Player('player', (150, 50))
+        self.player = Player((150, 50))
         self.entities.add(self.player)
-        self.entities.add(Mob((206, 70)))
+        self.entities.add(Mob('None', (206, 70)))
         self.cam.focus(self.player)
     
     def update(self):
@@ -30,12 +30,9 @@ class Game(engine.Game):
         
         self.display.fill('deepskyblue3')
         
-        if self.inputs.pressed(pygame.K_g):
-            self.cam.screen_shake(5)
-        
         if self.inputs.pressed(pygame.K_h):
-            self.entities.add(Mob((206, 70)))
-        
+            self.entities.add(Mob('None', (206, 70)))
+
         self.cam.update()
         
         self.map.render(self.display, self.cam.scroll)

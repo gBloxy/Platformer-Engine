@@ -11,20 +11,26 @@ class Entity(Element):
         self.type = type
         self.alive = True
         self.physics = None
+        self.action = ''
+        self.flip = False
+        self.animation = None
         
-        self.rect = pygame.Rect(pos, self.g.data.entities[type]['hitbox'])
-        self.img = pygame.Surface(self.rect.size)
-        
-        # self.img = self.g.asset['GraveRobber']
-        # self.rect = self.img.get_rect(topleft=pos)
+        if type == 'None':
+            self.rect = pygame.Rect(pos, (18, 24))
+            self.default_img = pygame.Surface(self.rect.size)
+            self.config = {}
+        else:
+            self.config = self.g.data.sprites[type]
+            self.default_img = self.config.image
+            self.rect = pygame.Rect(pos, self.config['hitbox'])
+    
+    @property
+    def img(self):
+        return pygame.transform.flip(self.animation.img, self.flip, False) if self.animation else self.default_img
     
     @property
     def map_pos(self):
         return (self.rect.centerx // TILE_SIZE, self.rect.centery // TILE_SIZE)
-    
-    @property
-    def in_air(self):
-        return self.air_timer > 6
     
     @property
     def in_map(self):
@@ -34,25 +40,36 @@ class Entity(Element):
     def delete(self):
         self.alive = False
     
-    def update(self, dt=None):
-        pass
+    def set_action(self, action):
+        if self.action != action:
+            self.action = action
+            self.animation = self.config.get_anim(action)
+    
+    def update(self, dt):
+        if self.animation:
+            self.animation.update(dt)
     
     def render(self, surf, scroll):
         rect = offset_rect(self.rect, scroll)
         surf.blit(self.img, rect)
-        pygame.draw.rect(surf, 'red', rect, 1)
+        # pygame.draw.rect(surf, 'red', rect, 1)
 
 
 class PhysicEntity(Entity):
     def __init__(self, type, pos):
         super().__init__(type, pos)
         self.collisions = {i:False for i in {'left', 'right', 'top', 'bottom'}}
-        self.motion = [0, 0]
         self.vertical_momentum = 0
         self.air_timer = 0
         self.dropthrough = False
         self.physics = 'entity'
-        self.velocity = 1
+        self.speed = 1
+        self.last_move = (0, 0)
+        self.next_move = [0, 0]
+    
+    @property
+    def in_air(self):
+        return self.air_timer > 3
     
     def process_physics(self, motion, collideables):
         for tile in collideables:
@@ -96,23 +113,27 @@ class PhysicEntity(Entity):
                                 self.rect.bottom = tile.rect.top
                                 self.collisions['bottom'] = True
     
-    def move(self, motion):
+    def process_moving(self, movement):
         self.collisions = {i:False for i in {'left', 'right', 'top', 'bottom'}}
-        self.rect.x += motion[0]
+        self.rect.x += movement[0]
         collideables = self.g.map.get_neighbors(self.map_pos) if self.in_map else []
-        self.process_physics((motion[0], 0), collideables)
-        self.rect.y += motion[1]
+        self.process_physics((movement[0], 0), collideables)
+        self.rect.y += movement[1]
         collideables = self.g.map.get_neighbors(self.map_pos) if self.in_map else []
-        self.process_physics((0, motion[1]), collideables)
-        
-    def update_physics(self):
-        self.motion[1] += self.vertical_momentum
-        
+        self.process_physics((0, movement[1]), collideables)
+    
+    def move(self, motion):
+        self.next_move[0] += motion[0]
+        self.next_move[1] += motion[1]
+    
+    def gravity(self):
+        self.next_move[1] += self.vertical_momentum
         self.vertical_momentum += 0.3
         if self.vertical_momentum > 7:
             self.vertical_momentum = 7
-        
-        self.move(self.motion)
+    
+    def update_physics(self):
+        self.process_moving(self.next_move)
         
         if self.collisions['bottom']:
             self.air_timer = 0
@@ -122,21 +143,22 @@ class PhysicEntity(Entity):
             self.air_timer += 1
         else:
             self.air_timer += 1
-    
-    def jump(self):
-        if self.air_timer < 6:
-            self.vertical_momentum = -5
-    
-    def update(self, dt=None):
-        self.update_physics()
         
-        for tile in self.g.map.get_neighbors(self.map_pos) if self.in_map else []:
-            pygame.draw.rect(self.g.display, 'blue', offset_rect(tile.rect, self.g.cam.scroll), 1)
+        self.last_move = tuple(self.next_move)
+        self.next_move = [0, 0]
+        
+        if self.last_move[0] > 0:
+            self.flip = False
+        elif self.last_move[0] < 0:
+            self.flip = True
 
 
 class EntityGroup():
     def __init__(self):
         self.entities = []
+    
+    def __getitem__(self, key):
+        return self.entities[key]
     
     def __iter__(self):
         return self.entities.__iter__()
