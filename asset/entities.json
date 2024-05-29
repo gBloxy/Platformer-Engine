@@ -17,6 +17,10 @@
                 "frame_time": 125
             }
         }
-        
+    },
+    "bullet":
+    {
+        "hitbox": [12, 7],
+        "image": "bullet\\idle\\bullet.png"
     }
 }
