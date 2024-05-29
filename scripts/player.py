@@ -7,7 +7,7 @@ class Player(engine.PhysicEntity):
     def __init__(self, pos):
         super().__init__('player', pos)
         self.speed = 20
-        self.life = 10
+        self.life = 3
         self.jumps = 1
         self._invincible = 0
         self._dash = 0
@@ -29,6 +29,12 @@ class Player(engine.PhysicEntity):
     @property
     def dashing(self):
         return self._dash > 0
+    
+    def respawn(self, pos):
+        self.life = 3
+        self.alive = True
+        self.rect.topleft = pos
+        self.g.entities.add(self)
     
     def jump(self):
         if self.wall_slide:
@@ -103,8 +109,6 @@ class Player(engine.PhysicEntity):
                 self.set_action('walk')
             else:
                 self.set_action('idle')
-        else:
-            self.set_action('idle')
             
         self.update_physics()
         
