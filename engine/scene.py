@@ -2,7 +2,7 @@
 import pygame
 
 from engine import Element
-from .core import read_file, TILE_SIZE, offset
+from .core import read_file, read_json, TILE_SIZE, offset
 
 
 physics_types = {
@@ -10,7 +10,13 @@ physics_types = {
     '1': 'solid',
     '2': 'rampl',
     '3': 'rampr',
-    '4': 'dropthrough'
+    '4': 'dropthrough',
+    'air': 'air',
+    'grass': 'solid',
+    'dirt': 'solid',
+    'rl': 'rampr',
+    'rr': 'rampl',
+    'branch': 'dropthrough'
 }
 
 
@@ -26,7 +32,7 @@ class Tile(Element):
         try:
             self.physics = physics_types[data]
         except:
-            self.physics = 'air'
+            self.physics = 'solid'
     
     @property
     def air(self):
@@ -42,31 +48,52 @@ class Tile(Element):
 class Scene(Element):
     def __init__(self, file):
         super().__init__()
-        self.raw_map = []
         self.map = []
         self.tiles = []
+        self.background = []
+        self.foreground = []
         
+        if file.endswith('.txt'):
+            self._from_txt(file)
+        elif file.endswith('.json'):
+            self._from_json(file)
+        
+        self.rows = len(self.map)
+        self.cols = len(self.map[0])
+        self.width = self.cols * TILE_SIZE
+        self.height = self.rows * TILE_SIZE
+    
+    def __getitem__(self, key):
+        return self.map[key]
+    
+    def _from_txt(self, file):
         data = read_file(file)
-        
         for y, row in enumerate(data.splitlines()):
-            self.raw_map.append([])
             self.map.append([])
             for x, tile in enumerate(row):
-                self.raw_map[y].append(int(tile))
                 if tile != '0':
                     t = Tile(x, y, tile)
                     self.map[y].append(t)
                     self.tiles.append(t)
                 else:
                     self.map[y].append(Tile(x, y, '0'))
-        
-        self.rows = len(self.raw_map)
-        self.cols = len(self.raw_map[0])
-        self.width = self.cols * TILE_SIZE
-        self.height = self.rows * TILE_SIZE
     
-    def __getitem__(self, key):
-        return self.map[key]
+    def _from_json(self, file):
+        data = read_json(file)['map']
+        bkg = data[0]
+        self.background = [Tile(x, y, bkg[y][x]) for x in range(len(bkg[0])) for y in range(len(bkg))]
+        fg = data[2]
+        self.foreground = [Tile(x, y, fg[y][x]) for x in range(len(fg[0])) for y in range(len(fg))]
+        
+        for y, row in enumerate(data[1]):
+            self.map.append([])
+            for x, tile in enumerate(row):
+                if tile != 'air':
+                    t = Tile(x, y, tile)
+                    self.map[y].append(t)
+                    self.tiles.append(t)
+                else:
+                    self.map[y].append(Tile(x, y, 'air'))
     
     def get_neighbors(self, pos, range_=1):
         neighbors = []
@@ -92,3 +119,8 @@ class Scene(Element):
                     surf.blit(self.g.asset['dropthrough'], offset(tile.rect.topleft, scroll))
                 else:
                     surf.blit(self.g.asset['unknowed'], offset(tile.rect.topleft, scroll))
+    
+    def render(self, surf, scroll):
+        for tile in self.tiles:
+            if tile.is_visible(scroll):
+                surf.blit(self.g.asset[tile.type], offset(tile.rect.topleft, scroll))
