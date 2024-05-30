@@ -194,23 +194,23 @@ class Scene():
     
     def to_data(self):
         data = {}
-        map_ = [[tile[0] for tile in self.map[1][y]] for y in range(self.rows)]
+        map_ = [[[tile[0] for tile in self.map[z][y]] for y in range(self.rows)] for z in range(self.layers)]
         data['map'] = map_
         return data
     
     def from_data(self, data):
         map_ = data['map']
-        self.rows = len(map_)
-        self.cols = len(map_[0])
+        self.rows = len(map_[0])
+        self.cols = len(map_[0][0])
         
-        layer0 = [[['air', pygame.Rect((x*TILE_SIZE, y*TILE_SIZE), TILE_TUPLE)] for x in range(self.cols)] for y in range(self.rows)]
-        layer2 = [[['air', pygame.Rect((x*TILE_SIZE, y*TILE_SIZE), TILE_TUPLE)] for x in range(self.cols)] for y in range(self.rows)]
-        layer1 = [[[map_[y][x], pygame.Rect(x*TILE_SIZE, y*TILE_SIZE, *TILE_TUPLE)] for x in range(self.cols)] for y in range(self.rows)]
+        layer0 = [[[map_[0][y][x], pygame.Rect(x*TILE_SIZE, y*TILE_SIZE, *TILE_TUPLE)] for x in range(self.cols)] for y in range(self.rows)]
+        layer2 = [[[map_[2][y][x], pygame.Rect(x*TILE_SIZE, y*TILE_SIZE, *TILE_TUPLE)] for x in range(self.cols)] for y in range(self.rows)]
+        layer1 = [[[map_[1][y][x], pygame.Rect(x*TILE_SIZE, y*TILE_SIZE, *TILE_TUPLE)] for x in range(self.cols)] for y in range(self.rows)]
         self.map = [layer0, layer1, layer2]
         
         self.dim = [self.cols * TILE_SIZE, self.rows * TILE_SIZE]
         
-        ind.set_modified('temp')
+        ind.set_modified('saved')
     
     def is_visible(self, tile):
         rect = tile[1]
@@ -303,9 +303,13 @@ class Files():
     def save_scene(self):
         if self.path is None:
             self.path = filedialog.asksaveasfilename()
+            if not self.path:
+                self.path = None
+                return
         data = scene.to_data()
         write_json(self.path, data)
         scene.modified = False
+        ind.set_modified('saved')
     
     def check_modified(self):
         if scene.modified:
@@ -323,9 +327,10 @@ class Files():
         self.check_modified()
         file = filedialog.askopenfilename()
         if file:
-            self.path = file
-            data = read_json(self.path)
-            scene = Scene(data=data)
+            if file.endswith('.json'):
+                self.path = file
+                data = read_json(self.path)
+                scene = Scene(data=data)
 
 
 class GUI():
@@ -430,22 +435,28 @@ class Indications():
         self.set_pos((0, 0))
         self.set_layer(1)
         self.set_modified('temp')
+        self.set_zoom(1)
     
     def set_pos(self, pos):
         self.pos_surf = self.font.render(f'x: [{pos[0]}] y: [{pos[1]}]', 'black')[0]
     
     def set_layer(self, layer):
         layer = self.layers[layer]
-        self.layer_surf = self.font.render(f'layer: [{layer}]', 'black')[0]
+        self.layer_surf = self.font.render(f'layer: {layer}', 'black')[0]
     
     def set_modified(self, state):
         self.state_surf = self.font.render('*'+state if state == 'modified' else state, 'black')[0]
+    
+    def set_zoom(self, zoom):
+        self.zoom_surf = self.font.render(f'zoom: {str(zoom)}', 'black')[0]
     
     def render(self, surf):
         right = self.right - self.pos_surf.get_width()
         surf.blit(self.pos_surf, (right, self.centery - self.pos_surf.get_height() / 2))
         right = right - self.layer_surf.get_width() - 8
         surf.blit(self.layer_surf, (right, self.centery - self.layer_surf.get_height() / 2))
+        right = right - self.zoom_surf.get_width() - 8
+        surf.blit(self.zoom_surf, (right, self.centery - self.zoom_surf.get_height() / 2))
         right = right - self.state_surf.get_width() - 8
         surf.blit(self.state_surf, (right, self.centery - self.state_surf.get_height() / 2))
 
@@ -513,6 +524,8 @@ pastebin = None
 layer = 1
 layers = [True, True, True]
 
+asset.load_imgs_folder('asset\\textures\\tiles')
+
 
 while True:
     # events
@@ -532,10 +545,12 @@ while True:
         ui_hovered = True
     
     # manage zoom
-    if (inputs.pressed(pygame.K_EQUALS) or (mouse.scroll_up and not ui_hovered)) and zoom < 2:
+    if (inputs.pressed(pygame.K_EQUALS) or (mouse.scroll_up and not ui_hovered)) and zoom < 1.8:
         zoom += 0.2
+        ind.set_zoom(round(zoom, 2))
     elif (inputs.pressed(pygame.K_6) or (mouse.scroll_down and not ui_hovered)) and zoom > 0.6:
         zoom -= 0.2
+        ind.set_zoom(round(zoom, 2))
     
     # move the map
     if (mouse.holding_right or inputs.holding(pygame.K_SPACE)) and not moving_map and not ui_hovered:
