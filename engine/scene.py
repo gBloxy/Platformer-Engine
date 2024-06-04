@@ -6,17 +6,8 @@ from .core import read_file, read_json, TILE_SIZE, offset
 
 
 physics_types = {
-    '0': 'air',
-    '1': 'solid',
-    '2': 'rampl',
-    '3': 'rampr',
-    '4': 'dropthrough',
+    'unknowed': 'air',
     'air': 'air',
-    'grass': 'solid',
-    'dirt': 'solid',
-    'rl': 'rampr',
-    'rr': 'rampl',
-    'branch': 'dropthrough'
 }
 
 
@@ -105,20 +96,6 @@ class Scene(Element):
                     neighbors.append(tile)
         
         return neighbors
-    
-    def render(self, surf, scroll):
-        for tile in self.tiles:
-            if tile.is_visible(scroll):
-                if tile.type == '1':
-                    surf.blit(self.g.asset['tile'], offset(tile.rect.topleft, scroll))
-                elif tile.type == '2':
-                    surf.blit(self.g.asset['rampr'], offset(tile.rect.topleft, scroll))
-                elif tile.type == '3':
-                    surf.blit(self.g.asset['rampl'], offset(tile.rect.topleft, scroll))
-                elif tile.type == '4':
-                    surf.blit(self.g.asset['dropthrough'], offset(tile.rect.topleft, scroll))
-                else:
-                    surf.blit(self.g.asset['unknowed'], offset(tile.rect.topleft, scroll))
     
     def render(self, surf, scroll):
         for tile in self.tiles:

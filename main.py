@@ -14,7 +14,8 @@ class Game(engine.Game):
     def load(self):
         self.window.display_fps(True)
         
-        self.asset.load_imgs_folder('textures\\tiles\\')
+        self.asset.load_tileset('textures\\tiles\\tilebase')
+        self.asset.load_tileset('textures\\tiles\\tileset_1')
         
         self.map = engine.Scene(join('asset\\', 'map.json'))
         self.cam.set_tilemap(self.map)

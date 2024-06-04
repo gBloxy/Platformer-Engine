@@ -130,13 +130,32 @@ class Assets(Assets):
         surf_alpha = surf.copy()
         surf_alpha.set_alpha(180)
         self.images_alpha[name] = surf_alpha
+    
+    def load_tileset(self, path):
+        tiles = super().load_tileset(path)
+        for id in tiles:
+            surf = tiles[id]
+            self.textures[id] = pygame.transform.scale(surf, (30, 30))
+            surf_alpha = surf.copy()
+            surf_alpha.set_alpha(180)
+            self.images_alpha[id] = surf_alpha
         
     def querry_load(self):
-        path = filedialog.askdirectory()
-        if path:
-            self.load_imgs_folder(path)
-        else:
-            messagebox.showerror('Path Error', 'An error occured when choosing the textures path.')
+        mode = messagebox.askyesnocancel('Textures Types', 'What type of textures would you like to open ?\nYES : tileset\nNO : images folder')
+        if mode is not None:
+            if mode:
+                path = filedialog.askopenfilename()
+                if path:
+                    path = join(dirname(path), file_name(path))
+                    self.load_tileset(path)
+                else:
+                    messagebox.showerror('Path Error', 'An error occured when choosing the tileset path.')
+            else:
+                path = filedialog.askdirectory()
+                if path:
+                    self.load_imgs_folder(path)
+                else:
+                    messagebox.showerror('Path Error', 'An error occured when choosing the textures folder path.')
     
     def clear(self):
         global selected
@@ -210,7 +229,15 @@ class Scene():
         
         self.dim = [self.cols * TILE_SIZE, self.rows * TILE_SIZE]
         
+        self.check_unknowed()
         ind.set_modified('saved')
+    
+    def check_unknowed(self):
+        for z in range(self.layers):
+            for y in range(self.rows):
+                for x in range(self.cols):
+                    if self.map[z][y][x][0] not in asset.images and self.map[z][y][x][0] != 'air':
+                        self.map[z][y][x][0] = 'unknowed'
     
     def is_visible(self, tile):
         rect = tile[1]
@@ -524,7 +551,8 @@ pastebin = None
 layer = 1
 layers = [True, True, True]
 
-asset.load_imgs_folder('asset\\textures\\tiles')
+asset.load_tileset('asset\\textures\\tiles\\tilebase')
+asset.load_tileset('asset\\textures\\tiles\\tileset_1')
 
 
 while True:

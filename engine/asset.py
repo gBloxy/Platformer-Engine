@@ -1,9 +1,10 @@
 
 import pygame
 from os import listdir
-from os.path import join
+from os.path import join, dirname
 
-from engine.core import file_name, read_json
+from engine.core import file_name, read_json, TILE_TUPLE
+import engine.scene as scene
 
 
 class Assets():
@@ -30,6 +31,20 @@ class Assets():
             data = read_json(data_file)
         for name in listdir(join(self.path, path)):
             self._load_img(join(self.path, path, name), data if data_file else None)
+    
+    def load_tileset(self, path):
+        data = read_json(join(self.path, path) + '.json')
+        tileset = pygame.image.load(join(self.path, dirname(path), file_name(path))+'.png')
+        tiles = {}
+        for id in data:
+            tile = data[id]
+            surf = tileset.subsurface(tile[0], TILE_TUPLE).copy()
+            tiles[id] = surf
+            if len(tile) == 2:
+                physics_type = tile[1]
+                scene.physics_types[id] = physics_type
+        self.images.update(tiles)
+        return tiles
     
     def load_sound(self, path, volume=1):
         sound = pygame.mixer.Sound(join(self.path, path))

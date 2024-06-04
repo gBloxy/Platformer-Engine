@@ -8,6 +8,14 @@ TILE_SIZE = 16
 TILE_TUPLE = (TILE_SIZE, TILE_SIZE)
 
 
+def file_name(path):
+    return splitext(basename(path))[0]
+
+
+def relative_path(full_path, sub_path):
+    return full_path[full_path.find(sub_path):] if sub_path in full_path else None
+
+
 def read_file(path):
     with open(path) as file:
         data = file.read()
@@ -45,10 +53,6 @@ def offset_rect(rect, scroll):
 def smooth(val, target, dt, slowness=1):
     val += (target - val) / slowness * min(dt / 1000, slowness)
     return val
-
-
-def file_name(path):
-    return splitext(basename(path))[0]
 
 
 def blit_center(target_surf, surf, pos):
